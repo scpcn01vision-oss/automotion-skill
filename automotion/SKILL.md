@@ -10,15 +10,23 @@ description: 通用的口播视频成片自动化（automotion 工具链封装�
 
 ## 依赖（工具仓库）
 
-本 skill 是 automotion 工具链的使用说明。工具本体（122 镜头库、工作台、合成组件、转录脚本）在独立仓库 `automotion-v7`（GitHub；v7 为内部迭代代号，对外统称 automotion）。开工前：
+本 skill 是 automotion 工具链的使用说明。工具本体（122 镜头库、工作台、合成组件、转录脚本）在独立仓库 [automotion](https://github.com/scpcn01vision-oss/automotion)（v7 为内部迭代代号，对外统称 automotion）。以下命令均在工具根目录执行。
 
-1. Clone 工具仓库并安装依赖（npm install；转录需 pip install whisper jieba opencc）
-2. 项目侧准备数据目录，记作 `V7_PROJECT_DIR`（环境变量，启动工作台/转录/整片时都要设）。目录需含：
+**首次使用自动安装（用户无需手动操作）**：本 skill 第一次被触发时，自动运行 `scripts/setup-toolchain.ps1` 完成：
+
+1. 检查 git / Node.js / Python 是否就绪，缺失时引导安装
+2. clone 工具仓库到 `~/.automotion/`（已存在则 `git pull` 更新）
+3. `npm install`（工作台与整片合成依赖）
+4. `pip install whisper jieba opencc`（转录依赖；whisper 首次运行还会自动下载模型）
+
+工具根目录默认 `~/.automotion/`，可用环境变量 `V7_TOOL_DIR` 覆盖（已有本地工具仓库时）。工具链就绪后：
+
+1. 项目侧准备数据目录，记作 `V7_PROJECT_DIR`（环境变量，启动工作台/转录/整片时都要设）。目录需含：
    - 录音 `full.wav`
    - `storyboard.json`（初始可为骨架/空结构，转录会回填真实时长）
    - 段画像 `段画像-<项目>.md`（工作台左栏数据源；server 默认读「段画像-013B.md」，可用 `V7_PROFILE_FILE` 环境变量覆盖）
    - 文案分段版（供核对；正式分段以 storyboard 的 segments 为准）
-3. 项目数据只在项目侧流转，不进工具仓库、不进 git
+2. 项目数据只在项目侧流转，不进工具仓库、不进 git
 
 ## 全流程
 
@@ -56,7 +64,7 @@ python scripts/transcribe.py
 产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到 `out/match-<项目>.json`。工作台启动时用 `MATCH_FILE` 环境变量指向它：
 
 ```powershell
-$env:MATCH_FILE = "E:\路径\到\工具仓库\out\match-013B.json"
+$env:MATCH_FILE = "$env:V7_TOOL_DIR\out\match-<项目>.json"
 ```
 
 未设置 `MATCH_FILE` 时工作台默认读 `out/match-013B.json`（013B 开发默认）。

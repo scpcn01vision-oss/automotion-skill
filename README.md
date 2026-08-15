@@ -16,7 +16,8 @@ Codex 用户：
 ## 使用
 
 对话中触发 `$automotion`，提供「文案 + 录音」即可。完整流程见
-[SKILL.md](SKILL.md)。
+[SKILL.md](SKILL.md)。首次使用会自动安装工具链（clone 工具仓库到
+`~/.automotion/` 并装依赖），无需手动准备环境。
 
 ## 依赖
 
