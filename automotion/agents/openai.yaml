@@ -1,0 +1,4 @@
+interface:
+  display_name: "automotion 口播视频成片"
+  short_description: "文案+录音自动成片：转录分段→匹配→定稿→合成导出"
+  default_prompt: "Use $automotion to 把用户提供的文案和录音自动做成一条完整的口播视频。"

@@ -1,0 +1,9 @@
+# 项目侧数据（不进仓库）
+out/
+node_modules/
+*.wav
+transcript.json
+subtitles.json
+storyboard.json
+match-*.json
+段画像-*.md
