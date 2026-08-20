@@ -45,8 +45,8 @@ try {
 }
 finally { Pop-Location }
 
-Write-Step "pip install whisper jieba opencc（转录依赖）..."
-python -m pip install whisper jieba opencc
+Write-Step "pip install openai-whisper jieba opencc-python-reimplemented（转录依赖）..."
+python -m pip install openai-whisper jieba opencc-python-reimplemented
 if ($LASTEXITCODE -ne 0) { throw "pip install 失败" }
 
 Write-Host ""
