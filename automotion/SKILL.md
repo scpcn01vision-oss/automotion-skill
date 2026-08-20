@@ -96,7 +96,7 @@ python scripts/transcribe.py
 4. 防重复：同一镜头间隔 <5 段排除；≥5 段允许复用
 5. 输出每段 Top5 候选 + reason，全部展示不折叠
 
-产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到 `out/match-<项目>.json`。工作台默认读 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
+产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到项目侧 `V7_PROJECT_DIR/out/match-<项目>.json`。工作台默认读项目侧 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
 
 - 无准入/无排除/无禁入：任何镜头都可被匹配
 - 驳回反馈：镜头被否 → 修该镜头的定位描述/标签，不建黑名单
