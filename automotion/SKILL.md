@@ -24,7 +24,7 @@ description: 通用的口播视频成片自动化（automotion 工具链封装�
 1. 项目侧准备数据目录，记作 `V7_PROJECT_DIR`（环境变量，启动工作台/转录/整片时都要设）。目录需含：
    - 录音 `full.wav`
    - `storyboard.json`（初始可为骨架/空结构，转录会回填真实时长）
-   - 段画像 `段画像-<项目>.md`（工作台左栏数据源；server 默认读「段画像-013B.md」，可用 `V7_PROFILE_FILE` 环境变量覆盖）
+   - 段画像 `段画像-<项目>.md`（工作台左栏数据源；server 默认按项目目录名推导，如目录 `015` 自动读「段画像-015.md」，可用 `V7_PROFILE_FILE` 覆盖）
    - 文案分段版（供核对；正式分段以 storyboard 的 segments 为准）
 2. 项目数据只在项目侧流转，不进工具仓库、不进 git
 
@@ -44,7 +44,7 @@ $env:V7_PROJECT_DIR = "E:\路径\到\项目目录"
 python scripts/transcribe.py
 ```
 
-脚本读 `V7_PROJECT_DIR` 定位项目数据（未设置时回退到 013B 开发默认路径）。**已有 transcript.json 时加 `--skip-transcribe`**，跳过 whisper（medium 模型很慢），复用词级转录只做对齐/切分/时长更新。
+脚本读 `V7_PROJECT_DIR` 定位项目数据（未设置时直接报错退出）。**已有 transcript.json 时加 `--skip-transcribe`**，跳过 whisper（medium 模型很慢），复用词级转录只做对齐/切分/时长更新。
 
 产出：`transcript.json`（词级）、`subtitles.json`（字幕条）、`storyboard.json`（durationSec 真实化）。
 
@@ -67,14 +67,14 @@ python scripts/transcribe.py
 $env:MATCH_FILE = "$env:V7_TOOL_DIR\out\match-<项目>.json"
 ```
 
-未设置 `MATCH_FILE` 时工作台默认读 `out/match-013B.json`（013B 开发默认）。
+未设置 `MATCH_FILE` 时工作台默认读 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
 
 - 无准入/无排除/无禁入：任何镜头都可被匹配
 - 驳回反馈：镜头被否 → 修该镜头的定位描述/标签，不建黑名单
 
 ### Step 3 工作台定稿（人工 + 对话）
 
-设置 `V7_PROJECT_DIR`（同上）与 `MATCH_FILE` 后，启动工作台（工具仓库）：
+设置 `V7_PROJECT_DIR`（同上；`MATCH_FILE` / `V7_PROFILE_FILE` 未设置时 server 按项目名自动推导）后，启动工作台（工具仓库）：
 
 ```bash
 npm run dev
@@ -98,7 +98,7 @@ npm run dev
 npm run dev:whole
 ```
 
-`dev:whole` 默认打开 `out/whole-013B.tsx`（013B 开发默认）。**新项目先在 `out/` 建整片入口 `out/whole-<项目>.tsx`**（013B 的 `out/whole-013B.tsx` 可作模板），并把 `package.json` 里 `dev:whole` 的入口路径改成它。入口关键三点：
+`dev:whole` 使用通用整片入口 `templates/whole.tsx`（仓库内，所有项目复用同一份，无需按项目复制）。入口关键三点：
 
 ```ts
 import storyboard from 'project-data/storyboard.json'; // project-data alias → V7_PROJECT_DIR
@@ -117,8 +117,8 @@ const AUDIO_SRC = 'http://localhost:3004/api/audio/full.wav'; // 必须 http 地
 导出用 remotion CLI（1920×1080@30，无 BGM）：
 
 ```bash
-npx remotion render out/whole-013B.tsx Whole013B out/whole.mp4                          # 全片
-npx remotion render out/whole-013B.tsx Whole013B out/check.mp4 --frames=0-299           # 小范围验证
+npx remotion render templates/whole.tsx Whole out/whole.mp4                          # 全片
+npx remotion render templates/whole.tsx Whole out/check.mp4 --frames=0-299           # 小范围验证
 ```
 
 - Studio（`dev:whole`）占着 3003 时，渲染命令要换端口：`--port=3005`
