@@ -109,7 +109,7 @@ python scripts/transcribe.py
 npm run dev
 ```
 
-也可以把工具仓库 `templates/启动工作台.ps1` 复制到项目目录（脚本自动设置 `V7_PROJECT_DIR` 并切到工具目录），在项目目录直接运行脚本启动。
+也可以把工具仓库 `templates/launch-workbench.ps1` 复制到项目目录（脚本自动设置 `V7_PROJECT_DIR` 并切到工具目录），在项目目录直接运行脚本启动。
 
 浏览器 5173 打开。按 [工作台需求-M4.md](references/工作台需求-M4.md) 操作：
 
