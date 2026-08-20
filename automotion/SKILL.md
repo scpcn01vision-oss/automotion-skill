@@ -1,12 +1,22 @@
 ---
 name: automotion
 version: 0.1.0
-description: 通用的口播视频成片自动化（automotion 工具链封装）。把用户提供的「文案 + 录音」自动做成完整口播视频：转录/分段 → 匹配 Top5 → 工作台定稿 → 整片合成 → 导出 mp4（1920×1080@30、带字幕与口播、无 BGM）。触发场景：用户说「做视频」「口播视频」「自动成片」「automotion」；或提供视频文稿/文案 + 录音并要生成完整视频。
+description: 通用的口播视频成片自动化（automotion 工具链封装）。把用户提供的「文案 + 录音」自动做成完整口播视频：分割定稿 → 派生 → 转录 → 匹配 Top5 → 工作台定稿 → 整片合成 → 导出 mp4（1920×1080@30、带字幕与口播、无 BGM）。触发场景：用户说「做视频」「口播视频」「自动成片」「automotion」；或提供视频文稿/文案 + 录音并要生成完整视频。
 ---
 
 # automotion
 
-自动化口播视频成片：文案 + 录音 → 成片。四步闭环，人工只在工作台定稿与整片验收。
+自动化口播视频成片：文案 + 录音 → 成片。人工触点只有三个：**分割版审核**、**工作台定稿**、**整片验收**。
+
+## 用户可见性
+
+用户只接触三样东西：
+
+1. **分割版**（Step 0.5 人工审核定稿）
+2. **工作台 UI**（Step 4 分镜与字幕定稿）
+3. **整片预览/成片**（Step 5 验收）
+
+`storyboard.json` / `transcript.json` / `subtitles.json` / `match-<项目>.json` 都是系统内部数据（机器格式），用户无需阅读，也不要求手工准备——它们由定稿分割版派生（Step 1）。
 
 ## 依赖（工具仓库）
 
@@ -17,20 +27,44 @@ description: 通用的口播视频成片自动化（automotion 工具链封装�
 1. 检查 git / Node.js / Python 是否就绪，缺失时引导安装
 2. clone 工具仓库到 `~/.automotion/`（已存在则 `git pull` 更新）
 3. `npm install`（工作台与整片合成依赖）
-4. `pip install whisper jieba opencc`（转录依赖；whisper 首次运行还会自动下载模型）
+4. `pip install openai-whisper jieba opencc-python-reimplemented`（转录依赖；whisper 首次运行还会自动下载模型）
 
-工具根目录默认 `~/.automotion/`，可用环境变量 `V7_TOOL_DIR` 覆盖（已有本地工具仓库时）。工具链就绪后：
+工具根目录默认 `~/.automotion/`，可用环境变量 `V7_TOOL_DIR` 覆盖（已有本地工具仓库时）。工具链就绪后，为项目建数据目录，记作 `V7_PROJECT_DIR`（环境变量，启动派生/转录/工作台/整片时都要设）。目录初始只需：
 
-1. 项目侧准备数据目录，记作 `V7_PROJECT_DIR`（环境变量，启动工作台/转录/整片时都要设）。目录需含：
-   - 录音 `full.wav`
-   - `storyboard.json`（初始可为骨架/空结构，转录会回填真实时长）
-   - 段画像 `段画像-<项目>.md`（工作台左栏数据源；server 默认按项目目录名推导，如目录 `015` 自动读「段画像-015.md」，可用 `V7_PROFILE_FILE` 覆盖）
-   - 文案分段版（供核对；正式分段以 storyboard 的 segments 为准）
-2. 项目数据只在项目侧流转，不进工具仓库、不进 git
+- 原始文案（用户稿件）
+- 录音 `full.wav`
+
+项目数据只在项目侧流转，不进工具仓库、不进 git。
 
 ## 全流程
 
-### Step 1 转录、对齐与字幕（自动）
+### Step 0 初始化：文案 → 分割版（AI）
+
+**输入**：原始文案 + `full.wav`
+
+**处理**：AI 把文案按语义单元分割成段，产出分割版 md（`## 段 N` + 段文本）——这是唯一给人看的中间产物，命名如 `<文案名>-分割版.md`。
+
+**输出**：分割版 md。
+
+### Step 0.5 人工审核：分割版定稿（人工）
+
+用户检查分割细度：每段是否语义完整、长短是否合适、切点是否正确；需要修改则直接改分割版文件。
+
+**定稿前不派生任何内部文件**；转录必须等分割定稿并派生后才执行。
+
+### Step 1 派生：定稿分割版 → storyboard.json（脚本 + AI）
+
+1. 运行派生脚本生成骨架（段 text 就位）：
+
+```bash
+python scripts/derive-storyboard.py "<V7_PROJECT_DIR>\<文案名>-分割版.md" --project-dir "$env:V7_PROJECT_DIR"
+```
+
+2. AI 为每段补 `summary`（摘要）、`role`（角色牌）、`features`（内容牌）——匹配与工作台左栏依赖这些字段。
+
+**输出**：`storyboard.json`（内部数据，机器格式；durationSec 待转录回填）。
+
+### Step 2 转录、对齐与字幕（自动）
 
 先设置项目目录（Windows PowerShell 示例）：
 
@@ -51,30 +85,24 @@ python scripts/transcribe.py
 - 字幕切分规则见 [字幕切分规范-M5.md](references/字幕切分规范-M5.md)（语义优先、单条 ≤18 汉字、停顿驱动）
 - 段真实时长 = 段内字幕时间跨度（首条开始 → 末条结束）
 
-### Step 2 匹配 Top5（自动，AI 语义对齐）
+### Step 3 匹配 Top5（自动，AI 语义对齐）
 
 按 [匹配机制-M3.md](references/匹配机制-M3.md) 执行：
 
 1. 为每段写一句「核心含义」（AI 语义理解，不做关键词机械匹配）
 2. 与镜头定位库（`docs/lens-scenes-draft.md`，工具仓库内）的使用场景描述语义对齐
-3. 段角色/内容牌命中镜头场景标签 → 排序靠前（标签是排序信号，不是排除）
+3. 段 role/features 命中镜头场景标签 → 排序靠前（标签是排序信号，不是排除）
 4. 防重复：同一镜头间隔 <5 段排除；≥5 段允许复用
 5. 输出每段 Top5 候选 + reason，全部展示不折叠
 
-产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到 `out/match-<项目>.json`。工作台启动时用 `MATCH_FILE` 环境变量指向它：
-
-```powershell
-$env:MATCH_FILE = "$env:V7_TOOL_DIR\out\match-<项目>.json"
-```
-
-未设置 `MATCH_FILE` 时工作台默认读 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
+产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到 `out/match-<项目>.json`。工作台默认读 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
 
 - 无准入/无排除/无禁入：任何镜头都可被匹配
 - 驳回反馈：镜头被否 → 修该镜头的定位描述/标签，不建黑名单
 
-### Step 3 工作台定稿（人工 + 对话）
+### Step 4 工作台定稿（人工 + 对话）
 
-设置 `V7_PROJECT_DIR`（同上；`MATCH_FILE` / `V7_PROFILE_FILE` 未设置时 server 按项目名自动推导）后，启动工作台（工具仓库）：
+设置 `V7_PROJECT_DIR` 后启动工作台（工具仓库）：
 
 ```bash
 npm run dev
@@ -90,7 +118,7 @@ npm run dev
 
 生成镜头参数时读 [自动填参-映射规律-M4.md](references/自动填参-映射规律-M4.md)；镜头参数结构规范见 [参数化设计规范.md](references/参数化设计规范.md)；镜头时间策略（弹刚/口播锚点/固定帧）见 [镜头时间策略声明规范.md](references/镜头时间策略声明规范.md)。
 
-### Step 4 整片合成与导出（自动）
+### Step 5 整片合成与导出（自动）
 
 整片预览（工作台 5173 + 整片 3003）：
 
@@ -129,3 +157,4 @@ npx remotion render templates/whole.tsx Whole out/check.mp4 --frames=0-299      
 - 保存式（非向导式）：每个环节完成后询问用户，由用户决定进入下一步
 - 项目数据（storyboard/转录/字幕/录音）在项目侧，不进仓库
 - 整片预览验收为人工：发现问题 → 回工作台改对应镜头 → 只重渲染该镜头，其余复用缓存
+- 用户可见性：分割版（审核）→ 工作台 UI（定稿）→ 整片预览（验收）；storyboard/transcript/subtitles/match 为系统内部数据
