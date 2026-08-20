@@ -109,6 +109,8 @@ python scripts/transcribe.py
 npm run dev
 ```
 
+也可以把工具仓库 `templates/启动工作台.ps1` 复制到项目目录（脚本自动设置 `V7_PROJECT_DIR` 并切到工具目录），在项目目录直接运行脚本启动。
+
 浏览器 5173 打开。按 [工作台需求-M4.md](references/工作台需求-M4.md) 操作：
 
 - 左栏段列表 / 中栏镜头预览 + 参数表单 / 右栏 Top5 推荐 + 镜头库（hover 预览）
