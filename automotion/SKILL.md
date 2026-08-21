@@ -60,7 +60,7 @@ description: 通用的口播视频成片自动化（automotion 工具链封装�
 python scripts/derive-storyboard.py "<V7_PROJECT_DIR>\<文案名>-分割版.md" --project-dir "$env:V7_PROJECT_DIR"
 ```
 
-2. AI 为每段补 `summary`（摘要）、`role`（角色牌）、`features`（内容牌）——匹配与工作台左栏依赖这些字段。
+2. AI 为每段补 `summary`（摘要）、`role`（角色牌）、`features`（内容牌）——匹配与工作台左栏依赖这些字段。features 判定必须按 [自动填参-映射规律-M4.md](references/自动填参-映射规律-M4.md) 的「内容牌判定规则」：**基于段文本原文特征**（含结构/动作标签），每个标签在 `featuresEvidence` 里记录原文摘录。
 
 **输出**：`storyboard.json`（内部数据，机器格式；durationSec 待转录回填）。
 
@@ -90,11 +90,12 @@ python scripts/transcribe.py
 
 按 [匹配机制-M3.md](references/匹配机制-M3.md) 执行：
 
-1. 为每段写一句「核心含义」（AI 语义理解，不做关键词机械匹配）
-2. 与镜头定位库（`docs/lens-scenes-draft.md`，工具仓库内）的使用场景描述语义对齐
-3. 段 role/features 命中镜头场景标签 → 排序靠前（标签是排序信号，不是排除）
-4. 防重复：同一镜头间隔 <5 段排除；≥5 段允许复用
-5. 输出每段 Top5 候选 + reason，全部展示不折叠
+1. **先判段的结构类型**（设问-回答 / 揭穿-反转 / 对比-转折 / 列举-展开 / 因果-推论）——结构是语义对齐的第一抓手
+2. 为每段写「核心含义」：必须包含**表达动作**（这段在做什么：揭穿/揭示/设问/对比/列举/推论…），不做关键词机械匹配
+3. 与镜头定位库（`docs/lens-scenes-draft.md`，工具仓库内）的使用场景描述语义对齐——**以结构/动作对齐优先**，词面/意象联想为次
+4. 排序：**语义对齐分 > 标签加权**；段 role/features 命中镜头标签仅作同分 tie-breaker（标签是排序信号，不是排除）
+5. 防重复：同一镜头间隔 <5 段排除；≥5 段允许复用
+6. 输出每段 Top5 候选 + reason——**reason 必须说明「段的什么结构 → 镜头的什么动作」**，禁止词面硬凑（如"节奏契合一秒"）
 
 产出物是 MatchResult JSON（结构见工具仓库 `shared/types.ts`：`meta + segments[{id, core, top5:[{lensId, reason}]}]`），写到项目侧 `V7_PROJECT_DIR/out/match-<项目>.json`。工作台默认读项目侧 `out/match-<项目名>.json`（按项目目录名自动推导，通常无需设置）。
 
